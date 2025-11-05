@@ -1,0 +1,5 @@
+{
+  "name": "RBAC Temporary Credential Script Generator",
+  "description": "An AI-powered tool to generate secure, short-lived, access-controlled scripts for various platforms like Kubernetes, AWS, and Vault. The user provides parameters, and the app generates an executable script.",
+  "requestFramePermissions": []
+}
