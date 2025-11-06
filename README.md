@@ -73,83 +73,107 @@ Now, scroll down to the **Pipeline** section and paste the following `Jenkinsfil
 This script defines the entire workflow for creating, waiting, and cleaning up the temporary permissions.
 
 ```groovy
-// Jenkinsfile for Temporary Kubernetes RBAC
-
+// Jenkinsfile for K8s Deployment
 pipeline {
-    agent any
+  agent {
+    label 'docker-lab'
+  }
 
-    environment {
-        // The unique names for the temporary resources
-        SERVICE_ACCOUNT_NAME = "${params.USER_ID}-temp"
-        ROLE_BINDING_NAME = "${params.USER_ID}-temp-binding"
-        KUBECONFIG_CREDENTIAL_ID = 'kubeconfig-prod' // The ID you set in Step 1
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+  }
+
+  environment {
+    // Variables for docker build and k8s deployment
+    APP_NAME = "easy-rbac"
+    APP_SERVICE_NAME = "${env.APP_NAME}-svc"
+    APP_INGRESS_NAME = "${env.APP_NAME}-ingress"
+    APP_HOST_URL = "http://easy-rbac.trongnv.xyx" 
+    DOCKER_REGISTRY = "https://registry-nexus.trongnv.xyz"
+    REGISTRY_HOST = DOCKER_REGISTRY.replace("https://", "").replace("http://", "")
+    DOCKER_CREDENTIALS = credentials('docker-login')
+    APP_IMAGE_NAME = "${env.REGISTRY_HOST}/${env.APP_NAME}/${env.APP_NAME}:latest"
+    K8S_NAMESPACE = 'app-dev'
+  }
+
+  stages { 
+    // --- Stage 1: Get latest code ---
+    stage('1. Checkout Code') {
+      steps {
+        echo 'Starting to check out code...'
+        cleanWs()
+        checkout scm 
+        echo "SUCCESS: Code checked out from Github."
+      }
     }
 
-    stages {
-        stage('Apply Temporary Access') {
-            steps {
-                script {
-                    echo "Granting role '${params.ROLE_NAME}' to user '${params.USER_ID}' for ${params.DURATION_HOURS} hour(s)."
-                    
-                    withCredentials([file(credentialsId: KUBECONFIG_CREDENTIAL_ID, variable: 'KUBECONFIG_FILE')]) {
-                        // Use the provided kubeconfig for all kubectl commands
-                        withEnv(["KUBECONFIG=${KUBECONFIG_FILE}"]) {
-                            
-                            sh "kubectl create serviceaccount ${SERVICE_ACCOUNT_NAME}"
-                            sh "kubectl create rolebinding ${ROLE_BINDING_NAME} --role=${params.ROLE_NAME} --serviceaccount=default:${SERVICE_ACCOUNT_NAME}"
-                            
-                            // Generate and display a temporary token (optional but helpful)
-                            // Note: This requires the Kubernetes CLI (kubectl) plugin to be installed in Jenkins.
-                            def token = sh(script: "kubectl create token ${SERVICE_ACCOUNT_NAME} --duration ${params.DURATION_HOURS}h", returnStdout: true).trim()
-                            echo "================================================================"
-                            echo "Temporary K8s token for ${params.USER_ID}:"
-                            echo "${token}"
-                            echo "================================================================"
-                            
-                        }
-                    }
-                }
-            }
-        }
+    // --- Stage 2: Build Docker Images and Push App to Registry ---
+    stage('2. Build Docker Images and Push App to Registry') {
+      steps {
+        echo "INFO: Building App image: ${env.APP_IMAGE_NAME}"
+        sh "docker build -t ${env.APP_IMAGE_NAME} ."
+        echo "INFO: Building App image: ${env.APP_IMAGE_NAME} successfylly"
 
-        stage('Wait for Expiration') {
-            steps {
-                script {
-                    def durationMinutes = params.DURATION_HOURS.toInteger() * 60
-                    echo "Access is active. Waiting for ${durationMinutes} minutes before cleanup..."
-                    
-                    // The timeout step will wait for the duration and then proceed.
-                    // If the pipeline is aborted, the cleanup will still run.
-                    timeout(time: durationMinutes, unit: 'MINUTES') {
-                        // This empty sleep is a robust way to make the timeout wait.
-                        // It's interruptible, unlike a raw `sleep` command.
-                        sleep(time: durationMinutes * 60, unit: 'SECONDS') 
-                    }
-                }
-            }
-        }
+        echo "INFO: Pushing App image..."
+        sh '''
+		          echo $DOCKER_CREDENTIALS_PSW | docker login ${DOCKER_REGISTRY} -u $DOCKER_CREDENTIALS_USR --password-stdin
+              docker push ${APP_IMAGE_NAME}
+              docker logout ${DOCKER_REGISTRY}
+           '''
+        echo "INFO: Pushing App image successfully"
+      }
     }
 
-    post {
-        // This block runs after all stages, regardless of success or failure.
-        // This ensures permissions are always revoked.
-        always {
-            script {
-                echo "Cleaning up temporary access for user '${params.USER_ID}'."
-                
-                withCredentials([file(credentialsId: KUBECONFIG_CREDENTIAL_ID, variable: 'KUBECONFIG_FILE')]) {
-                    withEnv(["KUBECONFIG=${KUBECONFIG_FILE}"]) {
-                        // Use --ignore-not-found to prevent errors if cleanup runs twice or if creation failed
-                        sh "kubectl delete rolebinding ${ROLE_BINDING_NAME} --ignore-not-found"
-                        sh "kubectl delete serviceaccount ${SERVICE_ACCOUNT_NAME} --ignore-not-found"
-                    }
-                }
-                
-                echo "Cleanup complete."
-            }
+    stage('Stage 3: Deploy to Kubernetes') {
+      steps {
+        echo 'Starting deployment to Kubernetes cluster...'       
+        echo '0. Cleaning up old resources...'
+        // Clean old App, Service, và Ingress
+        sh "kubectl delete deployment ${env.APP_NAME} --namespace=${env.K8S_NAMESPACE} || true"
+        sh "kubectl delete service ${env.APP_SERVICE_NAME} --namespace=${env.K8S_NAMESPACE} || true"
+        sh "kubectl delete ingress ${env.APP_INGRESS_NAME} --namespace=${env.K8S_NAMESPACE} || true"
+
+        echo '1. Applying Namespace and Secret...'
+        // Do not delete Namespace
+        sh "kubectl apply -f k8s/namespace.yaml --namespace=${env.K8S_NAMESPACE} || true"
+        sh "kubectl apply -f k8s/registry-secret.yaml -n ${env.K8S_NAMESPACE} || true"
+
+        echo '2. Applying Deployment, Service, and Ingress...'
+        sh "kubectl apply -f k8s/maf-service.yaml --namespace=${K8S_NAMESPACE}"
+        sh "kubectl apply -f k8s/maf-deployment.yaml --namespace=${K8S_NAMESPACE}"
+        sh "kubectl apply -f k8s/maf-ingress.yaml --namespace=${K8S_NAMESPACE}"
+
+        echo '3. Waiting 5 seconds...'
+        sh "sleep 5" 
+
+        echo '4. Waiting for deployment to complete...'
+        sh "kubectl rollout status deployment/${APP_NAME} --namespace=${K8S_NAMESPACE}"
+                        
+        echo '5. Getting Service Access URLs...'
+        script {
+          echo "----------------------------------------------------"
+          echo "✅ Frontend (Ingress): ${APP_HOST_URL}  (Need Access from outsite)"
+          echo "----------------------------------------------------"
         }
+      }
     }
-}
+  }
+  // --- Post Actions ---
+  post {
+    always {
+      sh 'docker logout'
+      echo 'INFO: Pipeline finished execution.'
+    }
+
+    success { 
+      echo 'SUCCESS: Pipeline completed successfully!'
+    }
+
+    failure { 
+      echo 'FAILED: Pipeline failed!'
+    }
+  } // End of post
+} // End of pipeline
 ```
 
 ---
