@@ -48,40 +48,6 @@ pipeline {
       }
     }
 
-    stage('Stage 3: Deploy to Kubernetes') {
-      steps {
-        echo 'Starting deployment to Kubernetes cluster...'       
-        echo '0. Cleaning up old resources...'
-        // Clean old App, Service, và Ingress
-        sh "kubectl delete deployment ${env.APP_NAME} --namespace=${env.K8S_NAMESPACE} || true"
-        sh "kubectl delete service ${env.APP_SERVICE_NAME} --namespace=${env.K8S_NAMESPACE} || true"
-        sh "kubectl delete ingress ${env.APP_INGRESS_NAME} --namespace=${env.K8S_NAMESPACE} || true"
-
-        echo '1. Applying Namespace and Secret...'
-        // Do not delete Namespace
-        sh "kubectl apply -f k8s/namespace.yaml --namespace=${env.K8S_NAMESPACE} || true"
-        sh "kubectl apply -f k8s/registry-secret.yaml -n ${env.K8S_NAMESPACE} || true"
-
-        echo '2. Applying Deployment, Service, and Ingress...'
-        sh "kubectl apply -f k8s/app-service.yaml --namespace=${K8S_NAMESPACE}"
-        sh "kubectl apply -f k8s/app-deployment.yaml --namespace=${K8S_NAMESPACE}"
-        sh "kubectl apply -f k8s/app-ingress.yaml --namespace=${K8S_NAMESPACE}"
-
-        echo '3. Waiting 5 seconds...'
-        sh "sleep 5" 
-
-        echo '4. Waiting for deployment to complete...'
-        sh "kubectl rollout status deployment/${APP_NAME} --namespace=${K8S_NAMESPACE}"
-                        
-        echo '5. Getting Service Access URLs...'
-        script {
-          echo "----------------------------------------------------"
-          echo "✅ Frontend (Ingress): ${APP_HOST_URL}  (Need Access from outsite)"
-          echo "----------------------------------------------------"
-        }
-      }
-    }
-  }
   // --- Post Actions ---
   post {
     always {
