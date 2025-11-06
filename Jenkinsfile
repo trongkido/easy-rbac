@@ -25,7 +25,6 @@ pipeline {
     stage('1. Checkout Code') {
       steps {
         echo 'Starting to check out code...'
-        cleanWs()
         checkout scm 
         echo "SUCCESS: Code checked out from Github."
       }
