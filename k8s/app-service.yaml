@@ -1,0 +1,14 @@
+apiVersion: v1
+
+kind: Service
+metadata:
+  name: easy-rbac-svc # Same with APP_SERVICE_NAME
+  namespace: app-dev
+spec:
+  type: ClusterIP
+  selector:
+    app: easy-rbac
+  ports:
+    - protocol: TCP
+      port: 80 
+      targetPort: 80

@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: easy-rbac-ingress
+  namespace: app-dev
+spec:
+  ingressClassName: nginx 
+  rules:
+  - host: "easy-rbac.trongnv.xyx" # Same with APP_HOST_URL
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: easy-rbac-svc # Point to ClusterIP service
+            port:
+              number: 80

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: easy-rbac # Same with APP_NAME
+  namespace: app-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: easy-rbac
+  template:
+    metadata:
+      labels:
+        app: easy-rbac
+    spec:
+      imagePullSecrets:
+      - name: docker-registry-creds
+      containers:
+      - name: easy-rbac
+        image: registry-nexus.trongnv.xyz/easy-rbac/easy-rbac:latest # same with APP_IMAGE_NAME
+        ports:
+        - containerPort: 80  # Nginx port in Dockerfile
