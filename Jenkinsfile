@@ -47,7 +47,7 @@ pipeline {
         echo "INFO: Pushing App image successfully"
       }
     }
-
+  }
   // --- Post Actions ---
   post {
     always {
