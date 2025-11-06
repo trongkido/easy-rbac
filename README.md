@@ -139,9 +139,9 @@ pipeline {
         sh "kubectl apply -f k8s/registry-secret.yaml -n ${env.K8S_NAMESPACE} || true"
 
         echo '2. Applying Deployment, Service, and Ingress...'
-        sh "kubectl apply -f k8s/maf-service.yaml --namespace=${K8S_NAMESPACE}"
-        sh "kubectl apply -f k8s/maf-deployment.yaml --namespace=${K8S_NAMESPACE}"
-        sh "kubectl apply -f k8s/maf-ingress.yaml --namespace=${K8S_NAMESPACE}"
+        sh "kubectl apply -f k8s/app-service.yaml --namespace=${K8S_NAMESPACE}"
+        sh "kubectl apply -f k8s/app-deployment.yaml --namespace=${K8S_NAMESPACE}"
+        sh "kubectl apply -f k8s/app-ingress.yaml --namespace=${K8S_NAMESPACE}"
 
         echo '3. Waiting 5 seconds...'
         sh "sleep 5" 
