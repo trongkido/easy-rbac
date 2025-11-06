@@ -12,7 +12,7 @@ pipeline {
     APP_NAME = "easy-rbac"
     APP_SERVICE_NAME = "${env.APP_NAME}-svc"
     APP_INGRESS_NAME = "${env.APP_NAME}-ingress"
-    APP_HOST_URL = "http://easy-rbac.trongnv.xyx" 
+    APP_HOST_URL = "http://easy-rbac.trongnv.xyz" 
     DOCKER_REGISTRY = "https://registry-nexus.trongnv.xyz"
     REGISTRY_HOST = DOCKER_REGISTRY.replace("https://", "").replace("http://", "")
     DOCKER_CREDENTIALS = credentials('docker-login')
