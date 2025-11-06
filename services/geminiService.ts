@@ -1,14 +1,5 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { GeneratorFormData } from '../types';
-
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  throw new Error("API_KEY environment variable not set.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const buildPrompt = (formData: GeneratorFormData): string => {
   return `
@@ -37,7 +28,12 @@ Target_Environment: ${formData.targetEnvironment}
 `;
 };
 
-export const generateScript = async (formData: GeneratorFormData): Promise<string> => {
+export const generateScript = async (formData: GeneratorFormData, apiKey: string): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("API Key is required.");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
   const prompt = buildPrompt(formData);
 
   try {
@@ -56,6 +52,9 @@ export const generateScript = async (formData: GeneratorFormData): Promise<strin
     return script;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
+    if (error instanceof Error && error.message.toLowerCase().includes('api key not valid')) {
+        throw new Error("API key not valid. Please check your key.");
+    }
     throw new Error("Failed to communicate with the AI model.");
   }
 };

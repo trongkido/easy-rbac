@@ -5,27 +5,44 @@ import Header from './components/Header';
 import GeneratorForm from './components/GeneratorForm';
 import ScriptOutput from './components/ScriptOutput';
 import { Loader2 } from 'lucide-react';
+import { useApiKey } from './context/ApiKeyContext';
+import ApiKeyInputPage from './components/ApiKeyInputPage';
 
 const App: React.FC = () => {
+  const { apiKey, setApiKey } = useApiKey();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [generatedScript, setGeneratedScript] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerateScript = useCallback(async (formData: GeneratorFormData) => {
+    if (!apiKey) {
+      setError("API Key is not set. Please set your API key.");
+      return;
+    }
     setIsLoading(true);
     setError(null);
     setGeneratedScript('');
     try {
-      const script = await generateScript(formData);
+      const script = await generateScript(formData, apiKey);
       setGeneratedScript(script);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to generate script: ${errorMessage}`);
+      // Check for common API key errors
+      if (errorMessage.toLowerCase().includes('api key not valid')) {
+          setError(`API Key is not valid. Please check your key and try again.`);
+          setApiKey(null); // Clear the invalid key
+      } else {
+          setError(`Failed to generate script: ${errorMessage}`);
+      }
       console.error(e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [apiKey, setApiKey]);
+
+  if (!apiKey) {
+    return <ApiKeyInputPage />;
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text-primary font-sans">
