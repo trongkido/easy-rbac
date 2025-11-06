@@ -1,4 +1,4 @@
-# Deploying Temporary Kubernetes RBAC via Jenkins
+# Deploying Temporary RBAC Generator via Jenkins
 
 This guide provides step-by-step instructions on how to use Jenkins to automate the creation and cleanup of temporary RBAC permissions in a Kubernetes cluster. The necessary parameters for the Jenkins job can be easily obtained from the **Temporary RBAC Script Generator** application.
 
