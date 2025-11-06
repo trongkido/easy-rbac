@@ -59,7 +59,7 @@ pipeline {
         echo '1. Applying Namespace and Secret...'
         // Do not delete Namespace
         sh "kubectl apply -f k8s/namespace.yaml --namespace=${env.K8S_NAMESPACE} || true"
-        sh "kubectl apply -f k8s/registry-secret.yaml -n ${env.K8S_NAMESPACE} || true"
+        //sh "kubectl apply -f k8s/registry-secret.yaml -n ${env.K8S_NAMESPACE} || true"
 
         echo '2. Applying Deployment, Service, and Ingress...'
         sh "kubectl apply -f k8s/app-service.yaml --namespace=${K8S_NAMESPACE}"
