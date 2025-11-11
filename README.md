@@ -290,3 +290,57 @@ The application will now be accessible in your web browser at **http://localhost
     ```sh
     docker rm rbac-app
     ```
+
+## Public application with Cloudflare
+In order to public application with Cloudflare, we need to have a domain managed by Cloudflare. Please refer to this link https://github.com/trongkido/devops-coaching/tree/main/jenkins/hand-on-jenkins-cicd/deploy-to-docker-k8s for detail.
+After login to Cloudflare, on the Cloudflare dashboard, you can reach Zero Trust by clicking on the “Access” option, as shown in the picture below
+![Alt text](./images/Cloudflare_enable_zero_trust.png)
+
+Then, choosing the Cloudflare account to configure Zero Trust for
+![Alt text](./images/Cloudflare_project_zero_trust.png)
+
+Within the Zero Trust dashboard, locate and click on “Network > Tunnels“, then select “Add a tunnel“.
+![Alt text](./images/Cloudflare_add_tunnel.png)
+
+Select Tunnel type: Select the “Cloudflared” method and click “Next”
+![Alt text](./images/Cloudflare_add_tunnel_step_2.png)
+
+Name Your Tunnel: Provide a descriptive name for your tunnel (e.g., “MyHomeServerTunnel”).
+![Alt text](./images/Cloudflare_add_tunnel_step_3.png)
+
+Install the Tunnel Connector: After providing the name, you must install the Cloudflare binary on your server to establish a tunnel connection. You can do this easily by logging in to your server via SSH and executing the command on the screen.
+![Alt text](./images/Cloudflare_add_tunnel_step_4.png)
+
+```bash
+# Add cloudflared.repo to /etc/yum.repos.d/ 
+curl -fsSl https://pkg.cloudflare.com/cloudflared.repo | sudo tee /etc/yum.repos.d/cloudflared.repo
+
+#update repo
+sudo yum update
+
+# install cloudflared
+sudo yum install cloudflared
+
+cloudflared service install <token>
+# or
+cloudflared tunnel run --token <token>
+```
+
+> [!NOTE]
+> Your server which install Cloudflare binary need to have connection to your kubenetes cluster.
+
+Verify Tunnel Connection: After executing the command on your server, return to the Cloudflare Zero Trust dashboard. Your newly created tunnel should be listed at the bottom of the screen (as shown in the above screenshot), and its status should show as “Healthy“.
+![Alt text](./images/Cloudflare_add_tunnel_step_5.png)
+
+Then, you can config cloudflare to point to your web via ingress running in kubenetes cluster
+First, go to config screen as image below
+![Alt text](./images/Cloudflare_tunnel_config_step_1.png)
+
+Then, go to "Published application routes", then click to "Add a published application route"
+![Alt text](./images/Cloudflare_tunnel_config_step_2.png)
+
+Add a new route to point to your web domain with ingress config, you need to wait Cloudflare create a new record for your
+![Alt text](./images/Cloudflare_tunnel_config_step_3.png)
+
+Now, access to your web from internet
+![Alt text](./images/Cloudflare_webaccess.png)
