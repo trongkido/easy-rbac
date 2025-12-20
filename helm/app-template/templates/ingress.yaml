@@ -5,9 +5,14 @@ metadata:
   name: {{ include "app-template.fullname" . }}
   labels:
     {{- include "app-template.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- if or .Values.ingress.annotations .Values.ingress.certmanager.enabled }}
   annotations:
+    {{- if .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.ingress.certmanager.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certmanager.issuename }}
+    {{- end }}
   {{- end }}
   namespace: {{ .Release.Namespace }}
 spec:
