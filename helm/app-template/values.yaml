@@ -9,11 +9,10 @@ fullnameOverride: ""
 serviceAccount:
   create: false
 image:
-  repository: registry-nexus.trongnv.xyz/easy-rbac/easy-rbac
-  tag: latest
+  repository: us-central1-docker.pkg.dev/pelagic-pod-476510-v7/devops-docker-repo/easy-rbac
+  tag: "19"
   pullPolicy: IfNotPresent
-imagePullSecrets:
-  - name: nexus-registry-secret
+imagePullSecrets: ""
 serviceAccount:
   create: false
 service:
@@ -27,10 +26,18 @@ ingress:
   className: "nginx"
   annotations: {}
   hosts:
-    - host: "easy-rbac.trongnv.xyz"
+    - host: "gke-easy-rbac.trongnv.xyz"
       paths:
         - path: /
           pathType: Prefix
+  certmanager:
+    enabled: true
+    issuename: letsencrypt-prod
+    issueacme: https://acme-v02.api.letsencrypt.org/directory
+  tls:
+    - hosts:
+        - gke-easy-rbac.trongnv.xyz
+      secretName: web-tls-auto
 resources: {}
 livenessProbe:
   httpGet:
