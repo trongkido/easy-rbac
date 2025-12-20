@@ -1,0 +1,49 @@
+replicaCount: 1
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+serviceAccount:
+  create: false
+image:
+  repository: us-central1-docker.pkg.dev/pelagic-pod-476510-v7/devops-docker-repo/easy-rbac
+  tag: "19"
+  pullPolicy: IfNotPresent
+imagePullSecrets: ""
+serviceAccount:
+  create: false
+service:
+  name: http
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+  protocol: TCP
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: "gke-easy-rbac.trongnv.xyz"
+      paths:
+        - path: /
+          pathType: Prefix
+  certmanager:
+    enabled: true
+    issuename: letsencrypt-prod
+    issueacme: https://acme-v02.api.letsencrypt.org/directory
+  tls:
+    - hosts:
+        - gke-easy-rbac.trongnv.xyz
+      secretName: web-tls-auto
+resources: {}
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
